@@ -1,0 +1,207 @@
+# github-projects-mcp
+
+> A Model Context Protocol (MCP) server that brings full **GitHub Projects v2** (Kanban board) support to Claude Desktop — powered by the GitHub GraphQL API.
+
+The official GitHub MCP connector only covers the REST API, which has **no access to GitHub Projects v2**. This server fills that gap by exposing five GraphQL-backed tools that let Claude manage your Kanban boards, create issues, and move cards — all without leaving the conversation.
+
+---
+
+## Features
+
+- 📋 **List board items** — see all issues/PRs and their current column status
+- 🔀 **Move Kanban items** — drag cards between columns (Todo → In Progress → Done) programmatically
+- 🔍 **Get project metadata** — inspect fields, status options, and project structure
+- ✍️ **Create issues** — open new issues directly from Claude
+- ➕ **Add issues to a project** — link existing issues to any project board
+
+---
+
+## Requirements
+
+- [Node.js](https://nodejs.org/) v18 or higher
+- [Claude Desktop](https://claude.ai/download)
+- A GitHub **Personal Access Token (classic)** with the following scopes:
+  - `repo`
+  - `project`
+
+---
+
+## Installation
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/johnmikepty/github-projects-mcp.git
+cd github-projects-mcp
+```
+
+### 2. Install dependencies and build
+
+```bash
+npm install
+npm run build
+```
+
+### 3. Generate a GitHub Token
+
+Go to **https://github.com/settings/tokens** → *Generate new token (classic)*
+
+Required scopes:
+
+| Scope | Reason |
+|---|---|
+| `repo` | Read issues and repository data |
+| `project` | Read and write Projects v2 boards |
+
+### 4. Register in Claude Desktop
+
+Edit your Claude Desktop configuration file:
+
+- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+Add the following entry inside `mcpServers`:
+
+```json
+{
+  "mcpServers": {
+    "github-projects": {
+      "command": "node",
+      "args": ["C:\\path\\to\\github-projects-mcp\\dist\\index.js"],
+      "env": {
+        "GITHUB_TOKEN": "ghp_your_token_here"
+      }
+    }
+  }
+}
+```
+
+> **Note:** On Windows use double backslashes (`\\`) in the path.
+
+### 5. Restart Claude Desktop
+
+Close and reopen Claude Desktop completely. You should see `github-projects` listed under connected MCP servers in Settings → Connectors.
+
+---
+
+## Tools
+
+### `get_project`
+Get project metadata including all fields and available status column options.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `owner` | string | GitHub username or organization |
+| `projectNumber` | number | Project number (from the URL) |
+
+### `list_project_items`
+List all issues and PRs on the board with their current status column.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `owner` | string | GitHub username or organization |
+| `projectNumber` | number | Project number |
+
+### `move_project_item`
+Move an issue or PR to a different status column on the Kanban board.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `owner` | string | GitHub username or organization |
+| `projectNumber` | number | Project number |
+| `issueNumber` | number | Issue or PR number |
+| `targetStatus` | string | Target column name e.g. `Todo`, `In Progress`, `Done` |
+
+### `create_issue`
+Create a new GitHub issue in any repository.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `owner` | string | GitHub username or organization |
+| `repo` | string | Repository name |
+| `title` | string | Issue title |
+| `body` | string *(optional)* | Issue body (Markdown supported) |
+
+### `add_issue_to_project`
+Add an existing issue to a project board by its GraphQL node ID.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `owner` | string | GitHub username or organization |
+| `projectNumber` | number | Project number |
+| `issueNodeId` | string | Issue node ID (starts with `I_kw...`) |
+
+---
+
+## Usage Examples
+
+Once registered, you can ask Claude naturally:
+
+```
+List all items in project 9 of johnmikepty
+```
+```
+Move issue #15 to Done in project 9 of johnmikepty
+```
+```
+Create an issue titled "Fix login bug" in johnmikepty/my-app
+```
+```
+What issues are still in Backlog in project 9?
+```
+
+---
+
+## Development
+
+Run without building (uses `tsx` for on-the-fly TypeScript execution):
+
+```bash
+GITHUB_TOKEN=ghp_your_token npm run dev
+```
+
+Build for production:
+
+```bash
+npm run build
+npm start
+```
+
+---
+
+## Project Structure
+
+```
+github-projects-mcp/
+├── src/
+│   ├── index.ts              → MCP server entry point, tool definitions
+│   ├── graphql.ts            → Reusable GitHub GraphQL client
+│   └── tools/
+│       ├── get-project.ts    → Fetch project metadata
+│       ├── list-items.ts     → List board items with status
+│       ├── move-item.ts      → Move item to a status column
+│       ├── create-issue.ts   → Create a new issue
+│       └── add-to-project.ts → Add issue to a project board
+├── dist/                     → Compiled output (generated by build)
+├── package.json
+├── tsconfig.json
+└── README.md
+```
+
+---
+
+## Why This Exists
+
+The official GitHub MCP connector uses the **REST API**, which does not support GitHub Projects v2. Moving Kanban cards requires the **GraphQL API** (`updateProjectV2ItemFieldValue` mutation). This server bridges that gap so Claude can manage your entire project workflow — creating issues, tracking progress, and closing cards — without ever leaving the chat.
+
+---
+
+## Contributing
+
+Pull requests are welcome. If you'd like to add new tools (e.g., filtering by assignee, milestone support, or org-level projects), feel free to open an issue or submit a PR.
+
+---
+
+## License
+
+MIT
